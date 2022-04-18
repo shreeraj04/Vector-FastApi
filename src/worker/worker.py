@@ -81,19 +81,22 @@ def insert_data(geography):
             country_num_parks=geography["country_num_parks"],
         )
         session = SessionLocal()
+        # Check for the continent name in the Continent DB
         continent = session.query(models.Continent).filter(models.Continent.continent_name == geography["continent_name"])
         total_conti = geography["continent_population"]
         con = continent.one_or_none()
         if con == None:
+            # If continent name not present, add new record
             con = models.Continent(
             continent_name=geography["continent_name"],
             total_continent_population=total_conti
         )
-        else:            
+        else:
+            # Update the continent population to the continent name     
             total_conti = con.total_continent_population + geography["continent_population"]
             con.total_continent_population = total_conti
         
-
+        # Same goes with city name and city population
         city = session.query(models.City).filter(models.City.city_name == geography["city_name"])
         total_city = geography["city_population"]
         city_c = city.one_or_none()
@@ -148,7 +151,6 @@ def delete_data(id):
         session = SessionLocal()
         to_delete = session.query(models.Geography).get(id)
 
-        # if to_delete item with given id exists, delete it from the database. Otherwise raise 404 error
         if to_delete:
             session.delete(to_delete)
             session.commit()

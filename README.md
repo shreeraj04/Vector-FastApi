@@ -43,16 +43,17 @@ There are three APIs in total.
  - SQLAlchemy ORM is being used here, on start of the worker a database table will be created if not present in an SQLite file. SQLite is a file system kind of database. Any other relational database also can be used instead of SQLite like MSSQL, Postgres, MySQL etc.,
  - FastAPI provides the Swagger docs for the client to check the API details and payload details
  - I've chosen RabbitMQ because I actually found it useful to use than kafka.
+ - In Create API - I am checking if the continent and city name is already present or not. If present, updating the total count in a seperate table
+ - In Create API - Checking few validations from the total count table for continent population and city population (area wise as well)
 
 ## Pending from Assignment
 
  - Validation check before adding or updating to the database.
 	 - How it can be done ?
-		 - During insert we can check if the particular continent or country is already there or not. If there, skip the insert as there can be only one country or continent. 
-		 - We can make a proper DB design and table structure with relationships between the table.
+		 - We can make a proper DB design and table structure with relationships between the table. Currently there are 3 tables - Geography, City and Continent.
+		 We can have a proper design with relationship between the continent, country and city data.
 		 - During update, we can check if the 'count columns' for a particular continent or country is lesser than the new value or not. If not satisfied, we can let the client know about the information.
-		 - Can use the select, filter methods from the SQLAlchemy.
- -   Running from docker is working, but the APIs aren't working.
+ -   Running from docker is working, but the APIs aren't working in a docker environment.
 
 ## Production Deployment
 * Docker is a production ready system which is used nowadays in everywhere in an IT organization for the deployment.
@@ -62,4 +63,4 @@ There are three APIs in total.
 * I used FastAPI as I got to know that you guys are using it. I was actually knowing flask, aiohttp and gunicorn only. For this assignment I went through the fastapi docs and developed this
 * I have never using any message broker till now. I have only worked on Redis, pub/sub itself. For this assignment, went through RabbitMQ and implemented in this assignment
 * Maybe, there are many other techniques to use or implement both of these than how I have done here. I feel I will get to know and explore more when I actually work with real world projects in your organization or anywhere who are actually using it on a daily basis.
-* Number of hours totally spent on *development, documentation and understanding fastapi, rabbitmq*: **Approx. 14 hours**
+* Number of hours totally spent on *development, documentation and understanding fastapi, rabbitmq*: **Approx. 16.5 hours**

@@ -45,10 +45,13 @@ async def create_geography(geography: schemas.GeographyCreate):
         print("create geography")
         ret = await validate_data(geography)
         if ret:
+            print("Valid Data")
             session = SessionLocal()
             
             continent = session.query(Continent).filter(Continent.continent_name == geography.continent_name)
-            con = continent.one_or_none()   
+            con = continent.one_or_none()
+            print(con.total_continent_population)
+            print(geography.city_population)
             #TODO: Similarly we can do the below logic for area and population parameters
             if con.total_continent_population < geography.city_population:
                 return "City population cannot be greater than Continent Population"
@@ -74,7 +77,8 @@ async def create_geography(geography: schemas.GeographyCreate):
             }
             channel.basic_publish(exchange="", routing_key="insertion", body=json.dumps(geo_db))
             connection.close()
-        return geography
+            return geography
+        return "Invalid Data"
     except Exception as ex:
         print(f"Expcetion in create_geography() {ex}")
         return HTTPException(status_code=500, detail=f"Something went wrong")
@@ -88,37 +92,41 @@ async def update_data(id: int, geography: Optional[schemas.GeographyUpdate]):
     '''
     try:
         print("update data")
-        session = SessionLocal()
+        ret = await validate_data(geography)
+        if ret:
+            session = SessionLocal()
 
-        to_update = session.query(Geography).get(id)
-        print(to_update)
-        if to_update is not None:
-            print("ID exists")
-            # Connect to RabbitMQ using pika client and declare queue for updation
-            connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
-            channel = connection.channel()
-            channel.queue_declare(queue="updation", durable=True)
+            to_update = session.query(Geography).get(id)
+            print(to_update)
+            if to_update is not None:
+                print("ID exists")
+                # Connect to RabbitMQ using pika client and declare queue for updation
+                connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
+                channel = connection.channel()
+                channel.queue_declare(queue="updation", durable=True)
 
-            # prepare the json and publish to the queue
-            geo_db = {
-                "id": id,
-                "continent_population": geography.continent_population,
-                "city_population": geography.city_population,
-                "city_num_roads": geography.city_num_roads,
-                "city_num_trees": geography.city_num_trees,
-                "country_num_hospitals": geography.country_num_hospitals,
-                "country_num_parks": geography.country_num_parks,
-            }
+                # prepare the json and publish to the queue
+                geo_db = {
+                    "id": id,
+                    "continent_population": geography.continent_population,
+                    "city_population": geography.city_population,
+                    "city_num_roads": geography.city_num_roads,
+                    "city_num_trees": geography.city_num_trees,
+                    "country_num_hospitals": geography.country_num_hospitals,
+                    "country_num_parks": geography.country_num_parks,
+                }
 
-            channel.basic_publish(exchange="", routing_key="updation", body=json.dumps(geo_db))
-            connection.close()
+                channel.basic_publish(exchange="", routing_key="updation", body=json.dumps(geo_db))
+                connection.close()
 
-        # check if item with given id exists. If not, raise exception and return 404 not found response
+            # check if item with given id exists. If not, raise exception and return 404 not found response
+            else:
+                print("ID does not exist")
+                return HTTPException(status_code=404, detail=f"item with id {id} not found")
+
+            return "Updated Successfully"
         else:
-            print("ID does not exist")
-            return HTTPException(status_code=404, detail=f"item with id {id} not found")
-
-        return "Updated Successfully"
+            return "Record is not updated"
     except Exception as ex:
         print(f"Exception in update method() {ex}")
         return HTTPException(status_code=500, detail=f"Something went wrong with {id}")
