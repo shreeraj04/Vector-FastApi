@@ -27,3 +27,14 @@ class Geography(Base):
     country_num_hospitals = Column(Integer)
     country_num_parks = Column(Integer)
 
+class Continent(Base):
+    __tablename__ = "continent"
+    id = Column(Integer, primary_key=True)
+    continent_name = Column(String(50))
+    total_continent_population = Column(Integer)
+
+class City(Base):
+    __tablename__ = "city"
+    id = Column(Integer, primary_key=True)
+    city_name = Column(String(50))
+    total_city_population = Column(Integer)

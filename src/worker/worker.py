@@ -81,11 +81,40 @@ def insert_data(geography):
             country_num_parks=geography["country_num_parks"],
         )
         session = SessionLocal()
+        continent = session.query(models.Continent).filter(models.Continent.continent_name == geography["continent_name"])
+        total_conti = geography["continent_population"]
+        con = continent.one_or_none()
+        if con == None:
+            con = models.Continent(
+            continent_name=geography["continent_name"],
+            total_continent_population=total_conti
+        )
+        else:            
+            total_conti = con.total_continent_population + geography["continent_population"]
+            con.total_continent_population = total_conti
+        
+
+        city = session.query(models.City).filter(models.City.city_name == geography["city_name"])
+        total_city = geography["city_population"]
+        city_c = city.one_or_none()
+        if city_c == None:
+            city_c = models.City(
+            city_name=geography["city_name"],
+            total_city_population=total_city
+        )
+        else:            
+            total_city = city_c.total_city_population + geography["city_population"]
+            city_c.total_city_population = total_city
+
         # add it to the session and commit it
+        session.add(con)
         session.add(geo_db)
+        session.add(city_c)
         session.commit()
         print("To be refresh")
         session.refresh(geo_db)
+        session.refresh(con)
+        session.refresh(city_c)
         print("refreshed")
 
         # close the session

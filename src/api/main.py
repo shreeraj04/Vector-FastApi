@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException, status, Depends
 import pika
 import schemas
 from db import SessionLocal
-from db import Base, engine, Geography
+from db import Base, engine, Geography, City, Continent
 
 app = FastAPI()
 
@@ -15,6 +15,18 @@ def get_session():
         yield session
     finally:
         session.close()
+
+async def validate_data(data):
+    print("Validate data")
+    if data.continent_population < data.city_population:
+        return False
+    if data.continent_area < data.country_area:
+        return False
+    if data.continent_area < data.city_area:
+        return False
+    if data.country_area < data.city_area:
+        return False
+    return True
 
 @app.get("/")
 async def root():
@@ -31,28 +43,37 @@ async def create_geography(geography: schemas.GeographyCreate):
     """
     try:
         print("create geography")
-        # Connect to RabbitMQ using pika client and declare queue for insertion
-        connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
-        channel = connection.channel()
-        channel.queue_declare(queue="insertion", durable=True)
+        ret = await validate_data(geography)
+        if ret:
+            session = SessionLocal()
+            
+            continent = session.query(Continent).filter(Continent.continent_name == geography.continent_name)
+            con = continent.one_or_none()   
+            #TODO: Similarly we can do the below logic for area and population parameters
+            if con.total_continent_population < geography.city_population:
+                return "City population cannot be greater than Continent Population"
+            # Connect to RabbitMQ using pika client and declare queue for insertion
+            connection = pika.BlockingConnection(pika.ConnectionParameters("localhost"))
+            channel = connection.channel()
+            channel.queue_declare(queue="insertion", durable=True)
 
-        # prepare the json to insert and publish to the queue, return with continent name. Refer ResponseModel
-        geo_db = {
-            "continent_name": geography.continent_name,
-            "country_name": geography.country_name,
-            "city_name": geography.city_name,
-            "continent_population": geography.continent_population,
-            "city_population": geography.city_population,
-            "continent_area": geography.continent_area,
-            "country_area": geography.country_area,
-            "city_area": geography.city_area,
-            "city_num_roads": geography.city_num_roads,
-            "city_num_trees": geography.city_num_trees,
-            "country_num_hospitals": geography.country_num_hospitals,
-            "country_num_parks": geography.country_num_parks,
-        }
-        channel.basic_publish(exchange="", routing_key="insertion", body=json.dumps(geo_db))
-        connection.close()
+            # prepare the json to insert and publish to the queue, return with continent name. Refer ResponseModel
+            geo_db = {
+                "continent_name": geography.continent_name,
+                "country_name": geography.country_name,
+                "city_name": geography.city_name,
+                "continent_population": geography.continent_population,
+                "city_population": geography.city_population,
+                "continent_area": geography.continent_area,
+                "country_area": geography.country_area,
+                "city_area": geography.city_area,
+                "city_num_roads": geography.city_num_roads,
+                "city_num_trees": geography.city_num_trees,
+                "country_num_hospitals": geography.country_num_hospitals,
+                "country_num_parks": geography.country_num_parks,
+            }
+            channel.basic_publish(exchange="", routing_key="insertion", body=json.dumps(geo_db))
+            connection.close()
         return geography
     except Exception as ex:
         print(f"Expcetion in create_geography() {ex}")
@@ -69,7 +90,6 @@ async def update_data(id: int, geography: Optional[schemas.GeographyUpdate]):
         print("update data")
         session = SessionLocal()
 
-        # TODO: check in the DB if this ID exists, if not exits return 404
         to_update = session.query(Geography).get(id)
         print(to_update)
         if to_update is not None:
@@ -125,3 +145,5 @@ async def delete_data(id: int):
     except Exception as ex:
         print(f"Exception in delete method() {ex}")
         return HTTPException(status_code=500, detail=f"Something went wrong with id {id}")
+
+
